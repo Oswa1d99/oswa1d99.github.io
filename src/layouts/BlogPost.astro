@@ -1,0 +1,243 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import TagChip from '../components/TagChip.astro';
+import SeriesBadge from '../components/SeriesBadge.astro';
+import TableOfContents from '../components/TableOfContents.astro';
+import ShareButtons from '../components/ShareButtons.astro';
+import CommentSection from '../components/CommentSection.astro';
+import { getColor, type ColorResult } from '../lib/color-resolution';
+import { formatDate } from '../lib/format-date';
+import { siteConfig } from '../data/site-config';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  post: CollectionEntry<'blog'>;
+  colorMap: Map<string, ColorResult>;
+  headings: { depth: number; slug: string; text: string }[];
+  seriesNav?: { prev: CollectionEntry<'blog'> | null; next: CollectionEntry<'blog'> | null };
+  seriesPosts?: CollectionEntry<'blog'>[];
+  readingTime: number;
+}
+
+const { post, colorMap, headings, seriesNav, seriesPosts, readingTime } = Astro.props;
+const { title, pubDate, category, tags, series, seriesOrder, lang } = post.data;
+const dateStr = formatDate(pubDate);
+const seriesTotal = seriesPosts?.length;
+
+// Pagefind Korean Search Support (Lightweight Josa Stripper)
+// 복합 조사(길이가 긴 것)부터 단일 조사(길이가 짧은 것) 순으로 배치하여 가장 긴 조사가 먼저 매칭되도록 합니다.
+const JOSA_REGEX = /(이야말로|야말로|에서부터|으로부터|에게서|한테서|으로서|으로써|에서는|에게는|한테는|으로는|보다는|부터는|까지는|마저도|조차도|이라도|이든지|이나마|에게도|한테도|으로도|은커녕|는커녕|이라든지|라든지|이라던가|라던가|에서|에게|한테|로서|로써|으로|처럼|만큼|부터|까지|마저|조차|이나|라도|든지|나마|밖에|께서|에는|로는|와는|과는|만은|에도|치고는|마다|더러|보고|치고|치곤|커녕|이란|로부터|이야|이며|란|도|만|은|는|이|가|을|를|의|에|께|로|와|과|요|나|야|며|뿐)$/;
+
+function generateSearchKeywords(body: string) {
+  if (!body) return '';
+  // Remove basic markdown syntax for cleaner tokenization
+  const cleanText = body.replace(/[\#\*\`\[\]\(\)\>\-\_]/g, ' ');
+  const words = cleanText.split(/\s+/);
+  const keywords = new Set<string>();
+  
+  words.forEach(word => {
+    // Strip common Korean postpositions from the end of each word
+    const stripped = word.replace(JOSA_REGEX, '');
+    // Filter out single-character noise
+    if (stripped.length >= 2) {
+      keywords.add(stripped);
+    }
+  });
+  
+  return Array.from(keywords).join(' ');
+}
+
+const searchKeywords = generateSearchKeywords(post.body);
+---
+
+<BaseLayout title={title} description={post.data.description} lang={lang}>
+  <article class="content-wrap page-content" data-pagefind-body>
+    <header class="post-header">
+      <div class="post-category" data-pagefind-meta="category">{category}</div>
+      <h1 class="post-title" data-pagefind-weight="10">{title}</h1>
+      <div class="post-meta">
+        <span data-pagefind-meta="date">{dateStr}</span>
+        <span class="dot-sep">·</span>
+        <span>{readingTime}min</span>
+      </div>
+      {tags.length > 0 && (
+        <div class="post-tags">
+          {tags.map(tag => <TagChip tag={tag} colorMap={colorMap} />)}
+        </div>
+      )}
+      {series && (
+        <div class="post-series-info">
+          series: <SeriesBadge series={series} colorMap={colorMap} order={seriesOrder} total={seriesTotal} />
+        </div>
+      )}
+    </header>
+
+    <TableOfContents headings={headings} />
+
+    <div class="prose">
+      <slot />
+    </div>
+
+    {seriesNav && (seriesNav.prev || seriesNav.next) && (
+      <nav class="series-nav">
+        <div class="series-nav-title">series</div>
+        <div class="series-nav-links">
+          {seriesNav.prev ? (
+            <a href={`/posts/${seriesNav.prev.id}`} class="series-nav-link prev">{seriesNav.prev.data.title}</a>
+          ) : <span></span>}
+          {seriesNav.next ? (
+            <a href={`/posts/${seriesNav.next.id}`} class="series-nav-link next">{seriesNav.next.data.title}</a>
+          ) : <span></span>}
+        </div>
+        {seriesPosts && seriesPosts.length > 1 && (
+          <ol class="series-nav-list">
+            {seriesPosts.map((sp, i) => (
+              <li class={sp.id === post.id ? 'current' : ''}>
+                <a href={`/posts/${sp.id}`}>{sp.data.title}</a>
+              </li>
+            ))}
+          </ol>
+        )}
+      </nav>
+    )}
+
+    <footer class="post-footer">
+      <ShareButtons title={title} url={`${siteConfig.siteUrl}/posts/${post.id}`} description={post.data.description} />
+    </footer>
+
+    <CommentSection />
+
+    {/* Hidden Keywords for Pagefind Korean Search (Josa-stripped) */}
+    <div style="display: none;" aria-hidden="true" data-pagefind-weight="1">
+      {searchKeywords}
+    </div>
+  </article>
+
+  <style is:global>
+    .prose pre {
+      position: relative;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      font-family: var(--font-display);
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.6);
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 0 0 2px;
+      cursor: pointer;
+      opacity: 0.72;
+      text-decoration-line: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 4px;
+      transition:
+        color var(--transition-fast),
+        opacity var(--transition-fast),
+        text-underline-offset var(--transition-fast);
+    }
+    .prose pre:hover .copy-btn,
+    .copy-btn:focus-visible {
+      opacity: 1;
+    }
+    .copy-btn:hover,
+    .copy-btn:focus-visible,
+    .copy-btn.copied {
+      color: rgba(255, 255, 255, 1);
+      text-underline-offset: 5px;
+    }
+    .copy-btn:focus-visible {
+      outline: none;
+    }
+    .copy-btn.copied {
+      opacity: 1 !important;
+    }
+    .copy-btn.failed {
+      color: #ff6b6b;
+    }
+  </style>
+
+  <script is:inline>
+    function getCodeBlockText(pre) {
+      var code = pre.querySelector('code');
+      if (code) return code.textContent || '';
+
+      var clone = pre.cloneNode(true);
+      clone.querySelectorAll('.copy-btn').forEach(function(btn) {
+        btn.remove();
+      });
+      return clone.textContent || '';
+    }
+
+    function copyTextWithTextarea(text) {
+      return new Promise(function(resolve, reject) {
+        var textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-9999px';
+        textarea.style.left = '-9999px';
+        textarea.style.opacity = '0';
+        textarea.style.pointerEvents = 'none';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+
+        try {
+          if (document.execCommand('copy')) resolve();
+          else reject(new Error('Copy command failed'));
+        } catch (error) {
+          reject(error);
+        } finally {
+          textarea.remove();
+        }
+      });
+    }
+
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text).catch(function() {
+          return copyTextWithTextarea(text);
+        });
+      }
+      return copyTextWithTextarea(text);
+    }
+
+    function showCopyState(btn, text, className) {
+      btn.textContent = text;
+      btn.classList.add(className);
+      setTimeout(function() {
+        btn.textContent = 'COPY';
+        btn.classList.remove(className);
+      }, 2000);
+    }
+
+    function initCopyButtons() {
+      document.querySelectorAll('.prose pre').forEach(function(pre) {
+        if (pre.querySelector('.copy-btn')) return;
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'copy-btn';
+        btn.setAttribute('aria-label', 'Copy code');
+        btn.textContent = 'COPY';
+        btn.addEventListener('click', function() {
+          copyText(getCodeBlockText(pre))
+            .then(function() {
+              showCopyState(btn, 'COPIED ✓', 'copied');
+            })
+            .catch(function() {
+              showCopyState(btn, 'FAILED', 'failed');
+            });
+        });
+        pre.appendChild(btn);
+      });
+    }
+    initCopyButtons();
+    document.addEventListener('astro:after-swap', initCopyButtons);
+  </script>
+</BaseLayout>

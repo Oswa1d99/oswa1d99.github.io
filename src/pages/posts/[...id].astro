@@ -1,0 +1,33 @@
+---
+import { getCollection, render } from 'astro:content';
+import BlogPost from '../../layouts/BlogPost.astro';
+import { resolveAllColors } from '../../lib/color-resolution';
+import { groupBySeries, getSeriesNavigation } from '../../lib/series-utils';
+import { estimateReadingTime } from '../../lib/reading-time';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+  const seriesMap = groupBySeries(posts);
+
+  return posts.map(post => ({
+    params: { id: post.id },
+    props: {
+      post,
+      seriesPosts: post.data.series ? seriesMap.get(post.data.series)?.posts ?? [] : [],
+      seriesNav: post.data.series
+        ? getSeriesNavigation(seriesMap.get(post.data.series)?.posts ?? [], post.id)
+        : { prev: null, next: null },
+    },
+  }));
+}
+
+const { post, seriesPosts, seriesNav } = Astro.props;
+const allPosts = await getCollection('blog', ({ data }) => !data.draft);
+const colorMap = resolveAllColors(allPosts);
+const { Content, headings } = await render(post);
+const readingTime = estimateReadingTime(post.body || '', post.data.lang);
+---
+
+<BlogPost post={post} colorMap={colorMap} headings={headings} seriesNav={seriesNav} seriesPosts={seriesPosts} readingTime={readingTime}>
+  <Content />
+</BlogPost>

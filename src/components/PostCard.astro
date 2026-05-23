@@ -1,0 +1,37 @@
+---
+import TagChip from './TagChip.astro';
+import { getColor, type ColorResult } from '../lib/color-resolution';
+import { formatDate } from '../lib/format-date';
+
+interface Props {
+  title: string;
+  description: string;
+  pubDate: Date;
+  category: string;
+  tags: string[];
+  slug: string;
+  colorMap: Map<string, ColorResult>;
+  readingTime?: number;
+  lang?: string;
+}
+
+const { title, description, pubDate, category, tags, slug, colorMap, readingTime, lang = 'ko' } = Astro.props;
+---
+
+<a href={`/posts/${slug}`} class="landing-post-title">{title}</a>
+<div class="landing-post-meta">
+  <span class="category-label">{category}</span>
+  <span class="dot-sep">·</span>
+  <span>{formatDate(pubDate)}</span>
+  {readingTime && (
+    <>
+      <span class="dot-sep">·</span>
+      <span>{readingTime}min</span>
+    </>
+  )}
+</div>
+{tags.length > 0 && (
+  <div class="post-list-tags" style="margin-top: 6px;">
+    {tags.map(tag => <TagChip tag={tag} colorMap={colorMap} />)}
+  </div>
+)}

@@ -1,0 +1,133 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TagChip from '../../components/TagChip.astro';
+import EmptyState from '../../components/EmptyState.astro';
+import { getCollection } from 'astro:content';
+import { resolveAllColors } from '../../lib/color-resolution';
+import { estimateReadingTime } from '../../lib/reading-time';
+import { formatDate } from '../../lib/format-date';
+
+const allPosts = await getCollection('blog', ({ data }) => !data.draft);
+const sorted = allPosts.sort((a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime());
+const colorMap = resolveAllColors(allPosts);
+---
+
+<BaseLayout title="Posts" lang="ko">
+  <div class="content-wrap page-content">
+    {sorted.length > 0 ? (
+      <>
+        <div class="page-title-row">
+          <h1 class="post-title" style="margin-bottom: 0;">posts</h1>
+          <div class="lang-filter" id="lang-filter">
+            <a href="#" data-lang-filter="all" class="active">all</a>
+            <span class="sep">|</span>
+            <a href="#" data-lang-filter="ko">ko</a>
+            <span class="sep">|</span>
+            <a href="#" data-lang-filter="en">en</a>
+          </div>
+        </div>
+        <ul class="post-list" id="posts-list">
+          {sorted.map((post, i) => (
+            <li class="post-list-item" data-post-index={i} data-lang={post.data.lang}>
+              <a href={`/posts/${post.id}`} class="post-list-title">{post.data.title}</a>
+              <p class="post-list-description">{post.data.description}</p>
+              <div class="post-list-meta">
+                <span class="category-label">{post.data.category}</span>
+                <span class="dot-sep">·</span>
+                <span>{formatDate(post.data.pubDate)}</span>
+                <span class="dot-sep">·</span>
+                <span>{estimateReadingTime(post.body || '', post.data.lang)}min</span>
+              </div>
+              {post.data.tags.length > 0 && (
+                <div class="post-list-tags" style="margin-top: 6px;">
+                  {post.data.tags.map(tag => <TagChip tag={tag} colorMap={colorMap} />)}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+        <div id="posts-pagination" class="pagination"></div>
+      </>
+    ) : (
+      <EmptyState message="No posts yet." />
+    )}
+  </div>
+
+  <script is:inline>
+    function initLangFilter() {
+      var filterEl = document.getElementById('lang-filter');
+      if (!filterEl) return;
+      var links = filterEl.querySelectorAll('[data-lang-filter]');
+      var items = document.querySelectorAll('#posts-list .post-list-item[data-lang]');
+
+      links.forEach(function(link) {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          var lang = this.getAttribute('data-lang-filter');
+          links.forEach(function(l) { l.classList.remove('active'); });
+          this.classList.add('active');
+          items.forEach(function(item) {
+            var itemLang = item.getAttribute('data-lang');
+            item.style.display = (lang === 'all' || itemLang === lang) ? '' : 'none';
+          });
+        });
+      });
+    }
+
+    function initPagination() {
+      var items = document.querySelectorAll('#posts-list .post-list-item');
+      var paginationEl = document.getElementById('posts-pagination');
+      if (!items.length || !paginationEl) return;
+
+      var perPage = 10;
+      var total = items.length;
+      var totalPages = Math.ceil(total / perPage);
+      if (totalPages <= 1) { paginationEl.style.display = 'none'; return; }
+
+      var currentPage = 1;
+
+      function showPage(page) {
+        currentPage = page;
+        for (var i = 0; i < items.length; i++) {
+          items[i].style.display = (i >= (page - 1) * perPage && i < page * perPage) ? '' : 'none';
+        }
+        renderPagination();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      function renderPagination() {
+        var html = '';
+        if (currentPage > 1) {
+          html += '<a href="#" data-page="' + (currentPage - 1) + '">← prev</a>';
+        } else {
+          html += '<span>← prev</span>';
+        }
+        html += '<span class="current">' + currentPage + '</span>';
+        html += '<span>/</span>';
+        html += '<span>' + totalPages + '</span>';
+        if (currentPage < totalPages) {
+          html += '<a href="#" data-page="' + (currentPage + 1) + '">next →</a>';
+        } else {
+          html += '<span>next →</span>';
+        }
+        paginationEl.innerHTML = html;
+
+        paginationEl.querySelectorAll('a[data-page]').forEach(function(a) {
+          a.addEventListener('click', function(e) {
+            e.preventDefault();
+            showPage(parseInt(this.getAttribute('data-page')));
+          });
+        });
+      }
+
+      showPage(1);
+    }
+
+    initLangFilter();
+    initPagination();
+    document.addEventListener('astro:after-swap', function() {
+      initLangFilter();
+      initPagination();
+    });
+  </script>
+</BaseLayout>

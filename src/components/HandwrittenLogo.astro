@@ -1,0 +1,182 @@
+---
+import { TOTAL_WIDTH } from '../data/handwriting-paths';
+import { HANDWRITING_STROKES } from '../data/handwriting-strokes';
+
+interface Props {
+  label: string;
+}
+
+const { label } = Astro.props;
+
+const VIEWBOX_PAD = 10;
+const glyphMinY = -82;
+const glyphMaxY = 52;
+const vbX = -VIEWBOX_PAD;
+const vbY = glyphMinY - VIEWBOX_PAD;
+const vbW = TOTAL_WIDTH + VIEWBOX_PAD * 2;
+const vbH = (glyphMaxY - glyphMinY) + VIEWBOX_PAD * 2;
+---
+
+<h1 class="landing-title handwritten-logo" aria-label={label} data-handwritten-logo="svg" transition:animate="none">
+  <svg
+    viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}
+    class="handwritten-svg"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+    preserveAspectRatio="xMidYMid meet"
+  >
+    <defs>
+      <filter id="pen-glow" x="-100%" y="-100%" width="300%" height="300%">
+        <feGaussianBlur stdDeviation="0.8" result="blur" />
+        <feMerge>
+          <feMergeNode in="blur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+
+    </defs>
+
+    <g>
+      {HANDWRITING_STROKES.map((stroke) => (
+        <path
+          d={stroke.pathData}
+          class="handwritten-writing-stroke"
+          data-glyph-index={stroke.glyphIndex}
+          data-character={stroke.character}
+          stroke-width={stroke.penStrokeWidth}
+          style="opacity: 0;"
+        />
+      ))}
+
+      <circle class="handwritten-pen-tip" r="2" cx="-200" cy="-200" filter="url(#pen-glow)" />
+    </g>
+  </svg>
+</h1>
+
+<script>
+document.addEventListener('astro:page-load', function() {
+  var svg = document.querySelector('.handwritten-svg');
+  if (!svg) return;
+
+  var strokes = svg.querySelectorAll('.handwritten-writing-stroke');
+  var penTip = svg.querySelector('.handwritten-pen-tip');
+  var started = false;
+  var WRITING_SPEED = 560;
+  var MIN_STROKE_DURATION_MS = 240;
+  var DOT_DURATION_MS = 100;
+  var PEN_LIFT_MS = 50;
+
+  // 1. Read sessionStorage directly since Astro might strip the <html> class on navigation
+  var isAnimated = sessionStorage.getItem('logo-animated') === 'true';
+  var isReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (isAnimated || isReducedMotion) {
+    // Force CSS state immediately
+    document.documentElement.classList.add('has-animated');
+    strokes.forEach(function(stroke) {
+      stroke.style.strokeDasharray = 'none';
+      stroke.style.strokeDashoffset = '0';
+      stroke.style.opacity = '1';
+    });
+    if (penTip) penTip.style.opacity = '0';
+    return; // Skip animation completely
+  }
+
+  // 2. Mark as animated immediately so if user navigates away mid-animation, it won't repeat
+  sessionStorage.setItem('logo-animated', 'true');
+
+  function easeHandwriting(t) {
+    if (t < 0.5) return 2 * t * t;
+    return 1 - Math.pow(-2 * t + 2, 2) / 2;
+  }
+
+  function getStrokeDuration(stroke, length) {
+    var character = stroke.getAttribute('data-character');
+    if (character === '.') return DOT_DURATION_MS;
+    return Math.max(MIN_STROKE_DURATION_MS, (length / WRITING_SPEED) * 1000);
+  }
+
+  function delay(ms) {
+    return new Promise(function(resolve) { setTimeout(resolve, ms); });
+  }
+
+  function animateStroke(stroke) {
+    var length = 0;
+    try { length = stroke.getTotalLength(); } catch(e) {}
+    if (!length || length <= 0) return Promise.resolve();
+
+    var duration = getStrokeDuration(stroke, length);
+    stroke.style.strokeDasharray = String(length);
+    stroke.style.strokeDashoffset = String(length);
+    stroke.style.opacity = '1';
+
+    return new Promise(function(resolve) {
+      var start = performance.now();
+
+      function frame(now) {
+        var elapsed = now - start;
+        var progress = Math.min(elapsed / duration, 1);
+        var eased = easeHandwriting(progress);
+
+        var offset = length * (1 - eased);
+        stroke.style.strokeDashoffset = String(offset);
+
+        try {
+          var pt = stroke.getPointAtLength(length * eased);
+          penTip.setAttribute('cx', String(pt.x));
+          penTip.setAttribute('cy', String(pt.y));
+          penTip.style.opacity = '1';
+        } catch(e) {}
+
+        if (progress < 1) {
+          requestAnimationFrame(frame);
+        } else {
+          stroke.style.strokeDashoffset = '0';
+          stroke.style.strokeDasharray = 'none';
+          resolve();
+        }
+      }
+
+      requestAnimationFrame(frame);
+    });
+  }
+
+  async function runSequence() {
+    if (started) return;
+    started = true;
+
+    var sorted = Array.from(strokes).sort(function(a, b) {
+      return parseFloat(a.getAttribute('data-glyph-index')) - parseFloat(b.getAttribute('data-glyph-index'));
+    });
+
+    sorted.forEach(function(stroke) {
+      stroke.style.opacity = '0';
+      stroke.style.strokeDasharray = 'none';
+      stroke.style.strokeDashoffset = '0';
+    });
+
+    penTip.style.opacity = '0';
+
+    for (var i = 0; i < sorted.length; i++) {
+      await animateStroke(sorted[i]);
+      if (i < sorted.length - 1) {
+        await delay(PEN_LIFT_MS);
+      }
+    }
+
+    penTip.style.transition = 'opacity 300ms ease';
+    penTip.style.opacity = '0';
+    svg.dispatchEvent(new CustomEvent('handwriting-complete'));
+  }
+
+  function init() {
+    setTimeout(runSequence, 200);
+  }
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(init);
+  } else {
+    setTimeout(init, 500);
+  }
+});
+</script>

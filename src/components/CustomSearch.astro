@@ -1,0 +1,253 @@
+---
+import { getCollection } from 'astro:content';
+import { formatDate } from '../lib/format-date';
+import { getColor, resolveAllColors } from '../lib/color-resolution';
+
+const posts = await getCollection('blog', ({ data }) => !data.draft);
+const colorMap = resolveAllColors(posts);
+const searchPostMeta = Object.fromEntries(
+  posts.flatMap((post) => {
+    const metadata = {
+      title: post.data.title,
+      category: post.data.category,
+      date: formatDate(post.data.pubDate),
+      tags: post.data.tags.map((tag) => ({
+        name: tag,
+        color: getColor(colorMap, tag).hex,
+      })),
+    };
+    return [
+      [`/posts/${post.id}`, metadata],
+      [`/posts/${post.id}/`, metadata],
+    ];
+  })
+);
+---
+
+<div id="custom-search" class="search-overlay" data-open="false" aria-hidden="true">
+  <div class="search-panel">
+    <div class="search-field-wrap">
+      <span class="search-field-icon" aria-hidden="true">⌕</span>
+      <input
+        id="custom-search-input"
+        type="text"
+        placeholder="search"
+        autocomplete="off"
+      />
+      <button id="custom-search-clear" class="search-clear" type="button" aria-label="Clear search" hidden>×</button>
+    </div>
+    <div class="search-results-heading" id="custom-search-heading">Type to search</div>
+    <div id="custom-search-results" class="search-results"></div>
+    <div id="custom-search-hint" class="search-hint">esc to close</div>
+  </div>
+</div>
+
+<script is:inline define:vars={{ searchPostMeta }}>
+  function initCustomSearch() {
+    var overlay = document.getElementById('custom-search');
+    var input = document.getElementById('custom-search-input');
+    var resultsEl = document.getElementById('custom-search-results');
+    var headingEl = document.getElementById('custom-search-heading');
+    var hintEl = document.getElementById('custom-search-hint');
+    var clearBtn = document.getElementById('custom-search-clear');
+    var toggle = document.getElementById('search-toggle');
+    if (!overlay || !input || !resultsEl || !toggle) return;
+
+    var debounceTimer;
+    var pagefindLoaded = false;
+    var pagefindLoading = false;
+    var pagefind = null;
+    var pendingCallbacks = [];
+
+    function ensurePagefind(callback) {
+      if (pagefind && pagefindLoaded) { callback(); return; }
+      pendingCallbacks.push(callback);
+      if (pagefindLoading) {
+        return;
+      }
+      pagefindLoading = true;
+
+      import('/pagefind/pagefind.js')
+        .then(function(module) {
+          pagefind = module;
+          return pagefind.init ? pagefind.init() : undefined;
+        })
+        .then(function() {
+          pagefindLoaded = true;
+          pagefindLoading = false;
+          var callbacks = pendingCallbacks.slice();
+          pendingCallbacks = [];
+          callbacks.forEach(function(cb) { cb(); });
+        })
+        .catch(function() {
+          pagefindLoading = false;
+          pendingCallbacks = [];
+          setHeading('Unavailable');
+          resultsEl.innerHTML = '<div class="search-empty">Search not available — build the site first</div>';
+        });
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, function(char) {
+        return {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        }[char];
+      });
+    }
+
+    function normalizePath(url) {
+      try {
+        return new URL(url, window.location.origin).pathname;
+      } catch {
+        return url;
+      }
+    }
+
+    function setHeading(text) {
+      if (headingEl) headingEl.textContent = text;
+    }
+
+    function setEmptyState() {
+      resultsEl.innerHTML = '';
+      setHeading('Type to search');
+    }
+
+    function syncClearButton() {
+      if (!clearBtn) return;
+      clearBtn.hidden = input.value.length === 0;
+    }
+
+    function doSearch() {
+      var query = input.value.trim();
+      syncClearButton();
+      if (!query) {
+        setEmptyState();
+        return;
+      }
+      if (!pagefindLoaded) {
+        setHeading('Loading');
+        resultsEl.innerHTML = '<div class="search-loading">Loading search index…</div>';
+        ensurePagefind(function() {
+          performSearch(input.value.trim());
+        });
+        return;
+      }
+      performSearch(query);
+    }
+
+    function buildResultHtml(d) {
+      var path = normalizePath(d.url || '');
+      var metadata = searchPostMeta[path] || searchPostMeta[path.replace(/\/$/, '')] || {};
+      var title = metadata.title || (d.meta && d.meta.title) || d.url || '';
+      var category = metadata.category || (d.meta && d.meta.category) || '';
+      var date = metadata.date || (d.meta && d.meta.date) || '';
+      var tags = metadata.tags || [];
+      var excerpt = d.excerpt || '';
+
+      var html = '<a href="' + escapeHtml(d.url) + '" class="search-result" onclick="document.getElementById(\'custom-search\').style.display=\'none\'">';
+      html += '<div class="search-result-meta">';
+      if (category) html += '<span>' + escapeHtml(category) + '</span>';
+      if (category && date) html += '<span class="dot-sep">·</span>';
+      if (date) html += '<span>' + escapeHtml(date) + '</span>';
+      html += '</div>';
+      html += '<div class="search-result-title">' + escapeHtml(title) + '</div>';
+      if (tags.length) {
+        html += '<div class="search-result-tags">';
+        for (var j = 0; j < tags.length; j++) {
+          var tag = typeof tags[j] === 'string' ? { name: tags[j], color: 'var(--text-tertiary)' } : tags[j];
+          html += '<span class="tag search-result-tag">';
+          html += '<span class="tag-dot" style="background-color: ' + escapeHtml(tag.color) + ';"></span>';
+          html += escapeHtml(tag.name);
+          html += '</span>';
+        }
+        html += '</div>';
+      }
+      if (excerpt) html += '<div class="search-result-excerpt">' + excerpt + '</div>';
+      html += '</a>';
+      return html;
+    }
+
+    function performSearch(query) {
+      if (!query) {
+        setEmptyState();
+        return;
+      }
+      pagefind.search(query).then(function(results) {
+        if (!results.results || results.results.length === 0) {
+          setHeading('No results');
+          resultsEl.innerHTML = '<div class="search-empty">No results</div>';
+          return;
+        }
+        var promises = results.results.slice(0, 8).map(function(r) { return r.data(); });
+        Promise.all(promises).then(function(datas) {
+          var html = '';
+          for (var i = 0; i < datas.length; i++) {
+            html += buildResultHtml(datas[i]);
+          }
+          var count = results.results.length;
+          setHeading(count + ' result' + (count === 1 ? '' : 's'));
+          resultsEl.innerHTML = html;
+        });
+      }).catch(function() {
+        pagefindLoading = false;
+        setHeading('Error');
+        resultsEl.innerHTML = '<div class="search-empty">Search error</div>';
+      });
+    }
+
+    function open() {
+      overlay.style.display = 'block';
+      overlay.setAttribute('data-open', 'true');
+      overlay.setAttribute('aria-hidden', 'false');
+      setTimeout(function() { input.focus(); }, 50);
+    }
+
+    function close() {
+      overlay.style.display = 'none';
+      overlay.setAttribute('data-open', 'false');
+      overlay.setAttribute('aria-hidden', 'true');
+      input.value = '';
+      syncClearButton();
+      setEmptyState();
+    }
+
+    toggle.addEventListener('click', open);
+    if (hintEl) hintEl.addEventListener('click', close);
+    if (clearBtn) clearBtn.addEventListener('click', function() {
+      input.value = '';
+      syncClearButton();
+      setEmptyState();
+      input.focus();
+    });
+
+    input.addEventListener('input', function() {
+      syncClearButton();
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(doSearch, 250);
+    });
+
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(debounceTimer);
+        doSearch();
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && overlay.getAttribute('data-open') === 'true') close();
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        if (overlay.getAttribute('data-open') === 'true') close();
+        else open();
+      }
+    });
+  }
+
+  initCustomSearch();
+  document.addEventListener('astro:after-swap', initCustomSearch);
+</script>

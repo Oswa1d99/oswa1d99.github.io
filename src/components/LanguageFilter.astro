@@ -1,0 +1,15 @@
+---
+interface Props {
+  current?: string;
+}
+
+const { current } = Astro.props;
+---
+
+<div class="lang-filter">
+  <a href="/" class={!current ? 'active' : ''}>all</a>
+  <span class="sep">|</span>
+  <a href="/?lang=ko" class={current === 'ko' ? 'active' : ''}>ko</a>
+  <span class="sep">|</span>
+  <a href="/?lang=en" class={current === 'en' ? 'active' : ''}>en</a>
+</div>

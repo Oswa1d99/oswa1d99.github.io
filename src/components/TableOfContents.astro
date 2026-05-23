@@ -1,0 +1,21 @@
+---
+interface Props {
+  headings: { depth: number; slug: string; text: string }[];
+}
+
+const { headings } = Astro.props;
+const visibleHeadings = headings.filter(h => h.depth >= 2 && h.depth <= 4);
+---
+
+{visibleHeadings.length > 0 && (
+  <nav class="toc">
+    <div class="toc-title">contents</div>
+    <ul class="toc-list">
+      {visibleHeadings.map(h => (
+        <li class={`depth-${h.depth}`}>
+          <a href={`#${h.slug}`}>{h.text}</a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+)}

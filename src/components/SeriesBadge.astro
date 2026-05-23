@@ -1,0 +1,26 @@
+---
+import { getColor, type ColorResult } from '../lib/color-resolution';
+
+interface Props {
+  series: string;
+  colorMap: Map<string, ColorResult>;
+  order?: number;
+  total?: number;
+  linked?: boolean;
+}
+
+const { series, colorMap, order, total, linked = true } = Astro.props;
+const color = getColor(colorMap, series);
+const label = order && total ? `${series} (${order}/${total})` : series;
+const badgeStyle = `color: ${color.hex}; border-bottom-color: ${color.hex};`;
+---
+
+{linked ? (
+  <a href={`/series/${encodeURIComponent(series)}`} class="series-badge" style={badgeStyle}>
+    {label}
+  </a>
+) : (
+  <span class="series-badge" style={badgeStyle}>
+    {label}
+  </span>
+)}

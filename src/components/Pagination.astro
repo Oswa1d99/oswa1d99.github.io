@@ -1,0 +1,20 @@
+---
+interface Props {
+  prevUrl?: string;
+  nextUrl?: string;
+  currentPage: number;
+  totalPages: number;
+}
+
+const { prevUrl, nextUrl, currentPage, totalPages } = Astro.props;
+---
+
+{totalPages > 1 && (
+  <nav class="pagination">
+    {prevUrl ? <a href={prevUrl}>← prev</a> : <span>← prev</span>}
+    <span class="current">{currentPage}</span>
+    <span>/</span>
+    <span>{totalPages}</span>
+    {nextUrl ? <a href={nextUrl}>next →</a> : <span>next →</span>}
+  </nav>
+)}

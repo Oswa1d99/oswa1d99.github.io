@@ -1,0 +1,57 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SeriesBadge from '../../components/SeriesBadge.astro';
+import TagChip from '../../components/TagChip.astro';
+import { getCollection } from 'astro:content';
+import { resolveAllColors } from '../../lib/color-resolution';
+import { groupBySeries } from '../../lib/series-utils';
+import { estimateReadingTime } from '../../lib/reading-time';
+import { formatDate } from '../../lib/format-date';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+  const seriesMap = groupBySeries(posts);
+  return [...seriesMap.keys()].map(series => ({
+    params: { series },
+    props: { seriesInfo: seriesMap.get(series)! },
+  }));
+}
+
+const { seriesInfo } = Astro.props;
+const allPosts = await getCollection('blog', ({ data }) => !data.draft);
+const colorMap = resolveAllColors(allPosts);
+---
+
+<BaseLayout title={`Series: ${seriesInfo.name}`} lang="ko">
+  <div class="content-wrap page-content">
+    <h1 class="post-title" style="margin-bottom: 8px;">
+      <SeriesBadge series={seriesInfo.name} colorMap={colorMap} linked={false} />
+    </h1>
+    <p class="page-subtitle">
+      {seriesInfo.posts.length} post{seriesInfo.posts.length !== 1 ? 's' : ''}
+    </p>
+    <ol class="post-list" style="list-style: none; counter-reset: series-counter;">
+      {seriesInfo.posts.map((post, i) => (
+        <li class="post-list-item">
+          <a href={`/posts/${post.id}`} class="post-list-title">
+            <span style="color: var(--text-tertiary); font-size: 0.8rem; margin-right: 8px;">{i + 1}.</span>
+            {post.data.title}
+          </a>
+          <p class="post-list-description">{post.data.description}</p>
+          <div class="post-list-meta">
+            <span class="category-label">{post.data.category}</span>
+            <span class="dot-sep">·</span>
+            <span>{formatDate(post.data.pubDate)}</span>
+            <span class="dot-sep">·</span>
+            <span>{estimateReadingTime(post.body || '', post.data.lang)}min</span>
+          </div>
+          {post.data.tags.length > 0 && (
+            <div class="post-list-tags" style="margin-top: 6px;">
+              {post.data.tags.map(tag => <TagChip tag={tag} colorMap={colorMap} />)}
+            </div>
+          )}
+        </li>
+      ))}
+    </ol>
+  </div>
+</BaseLayout>

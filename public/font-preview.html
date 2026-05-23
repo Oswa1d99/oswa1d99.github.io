@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Font Themes Preview</title>
+  
+  <!-- 1. Editorial Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Gowun+Batang&display=swap" rel="stylesheet">
+  
+  <!-- 2. Brutalist Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/static/woff2/SUIT.css" rel="stylesheet">
+
+  <!-- 3. Analog Hacker Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:ital,wght@0,400;0,500;1,400&family=Gowun+Dodum&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #FAFAF8;
+      color: #1A1A1A;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+      padding: 60px 20px;
+      align-items: center;
+    }
+    
+    .theme-card {
+      width: 100%;
+      max-width: 600px;
+      background: #fff;
+      border: 1px solid #E5E5E2;
+      border-radius: 8px;
+      padding: 40px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+    }
+
+    .theme-title {
+      font-family: sans-serif;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #999;
+      border-bottom: 1px dashed #eee;
+      padding-bottom: 10px;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    /* Common layout classes */
+    .logo { font-size: 2.5rem; margin-bottom: 40px; text-align: center; }
+    .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: #999; margin-bottom: 20px; }
+    .post { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+    .post-title { font-size: 1.4rem; margin: 0 0 10px 0; }
+    .post-excerpt { font-size: 0.95rem; line-height: 1.7; color: #555; margin: 0 0 15px 0; }
+    .tags { font-size: 0.75rem; color: #888; }
+
+    /* 1. Editorial */
+    .editorial .logo { font-family: 'Cormorant Garamond', serif; font-weight: 600; font-style: italic; }
+    .editorial .label { font-family: 'Cormorant Garamond', serif; font-weight: 600; letter-spacing: 0.2em; }
+    .editorial .post-title { font-family: 'Gowun Batang', serif; font-weight: 600; }
+    .editorial .post-excerpt { font-family: 'Gowun Batang', serif; }
+    .editorial .tags { font-family: 'Cormorant Garamond', serif; font-style: italic; }
+
+    /* 2. Brutalist */
+    .brutalist .logo { font-family: 'Outfit', sans-serif; font-weight: 800; letter-spacing: -1px; text-transform: uppercase; }
+    .brutalist .label { font-family: 'Outfit', sans-serif; font-weight: 600; letter-spacing: 3px; }
+    .brutalist .post-title { font-family: 'SUIT', sans-serif; font-weight: 800; letter-spacing: -0.5px; }
+    .brutalist .post-excerpt { font-family: 'SUIT', sans-serif; font-weight: 400; }
+    .brutalist .tags { font-family: 'Outfit', sans-serif; font-weight: 600; text-transform: uppercase; }
+
+    /* 3. Analog Hacker */
+    .analog .logo { font-family: 'Chivo Mono', monospace; font-weight: 500; letter-spacing: -1px; }
+    .analog .label { font-family: 'Chivo Mono', monospace; font-weight: 400; }
+    .analog .post-title { font-family: 'Gowun Dodum', sans-serif; font-weight: 400; }
+    .analog .post-excerpt { font-family: 'Gowun Dodum', sans-serif; font-weight: 400; }
+    .analog .tags { font-family: 'Chivo Mono', monospace; background: #eee; padding: 2px 6px; border-radius: 4px;}
+  </style>
+</head>
+<body>
+
+  <!-- Theme 1: Editorial -->
+  <div class="theme-card editorial">
+    <div class="theme-title">1. Editorial / Magazine</div>
+    <div class="logo">Jay Baek.dev</div>
+    <div class="label">recent</div>
+    <div class="post">
+      <h2 class="post-title">Astro 블로그 성능 최적화 여정</h2>
+      <p class="post-excerpt">이번 포스트에서는 웹 폰트 최적화와 prefetch를 통해 페이지 로딩 속도를 혁신적으로 개선하고 매끄러운 사용자 경험을 만든 방법을 소개합니다.</p>
+      <div class="tags">#web #optimization</div>
+    </div>
+  </div>
+
+  <!-- Theme 2: Brutalist -->
+  <div class="theme-card brutalist">
+    <div class="theme-title">2. Brutalist / Futuristic</div>
+    <div class="logo">Jay Baek.dev</div>
+    <div class="label">recent</div>
+    <div class="post">
+      <h2 class="post-title">Astro 블로그 성능 최적화 여정</h2>
+      <p class="post-excerpt">이번 포스트에서는 웹 폰트 최적화와 prefetch를 통해 페이지 로딩 속도를 혁신적으로 개선하고 매끄러운 사용자 경험을 만든 방법을 소개합니다.</p>
+      <div class="tags">#web #optimization</div>
+    </div>
+  </div>
+
+  <!-- Theme 3: Analog Hacker -->
+  <div class="theme-card analog">
+    <div class="theme-title">3. Analog Hacker</div>
+    <div class="logo">Jay Baek.dev</div>
+    <div class="label">recent</div>
+    <div class="post">
+      <h2 class="post-title">Astro 블로그 성능 최적화 여정</h2>
+      <p class="post-excerpt">이번 포스트에서는 웹 폰트 최적화와 prefetch를 통해 페이지 로딩 속도를 혁신적으로 개선하고 매끄러운 사용자 경험을 만든 방법을 소개합니다.</p>
+      <div class="tags">web optimization</div>
+    </div>
+  </div>
+
+</body>
+</html>

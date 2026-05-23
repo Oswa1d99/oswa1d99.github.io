@@ -1,0 +1,85 @@
+---
+interface Props {
+  message?: string;
+}
+
+const { message = "No words yet." } = Astro.props;
+---
+
+<div class="empty-state-wrapper">
+  <div class="empty-state-glow"></div>
+  <div class="empty-state-content">
+    <span class="empty-message">{message}</span>
+    <span class="empty-cursor">_</span>
+  </div>
+</div>
+
+<style>
+  .empty-state-wrapper {
+    position: relative;
+    width: 100%;
+    min-height: 40vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 2rem;
+  }
+
+  .empty-state-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(120, 120, 120, 0.05) 0%, rgba(255, 255, 255, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    animation: breathe 8s ease-in-out infinite;
+  }
+
+  :global(.dark-mode) .empty-state-glow {
+    background: radial-gradient(circle, rgba(200, 200, 200, 0.08) 0%, rgba(0, 0, 0, 0) 70%);
+  }
+
+  .empty-state-content {
+    position: relative;
+    z-index: 1;
+    font-family: var(--font-mono, 'Courier New', Courier, monospace);
+    font-size: 1.25rem;
+    color: var(--text-color);
+    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    letter-spacing: -0.02em;
+  }
+
+  .empty-message {
+    font-weight: 300;
+  }
+
+  .empty-cursor {
+    font-weight: 400;
+    animation: blink 1s step-end infinite;
+    color: var(--text-color);
+  }
+
+  @keyframes breathe {
+    0%, 100% {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 0.5;
+    }
+    50% {
+      transform: translate(-50%, -50%) scale(1.1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+</style>

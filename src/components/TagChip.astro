@@ -1,0 +1,25 @@
+---
+import { getColor, type ColorResult } from '../lib/color-resolution';
+
+interface Props {
+  tag: string;
+  colorMap: Map<string, ColorResult>;
+  linked?: boolean;
+}
+
+const { tag, colorMap, linked = true } = Astro.props;
+const color = getColor(colorMap, tag);
+const dotStyle = `background-color: ${color.hex};`;
+---
+
+{linked ? (
+  <a href={`/tags/${encodeURIComponent(tag)}`} class="tag">
+    <span class="tag-dot" style={dotStyle} />
+    {tag}
+  </a>
+) : (
+  <span class="tag">
+    <span class="tag-dot" style={dotStyle} />
+    {tag}
+  </span>
+)}

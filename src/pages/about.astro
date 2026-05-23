@@ -1,0 +1,19 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { siteConfig } from '../data/site-config';
+---
+
+<BaseLayout title="About" lang="ko">
+  <div class="content-wrap page-content">
+    <h1 class="post-title" style="margin-bottom: 32px;">about</h1>
+    <div class="about-content">
+      <p>개발자. 코드로 생각을 실현하고, 글로 생각을 정리한다.</p>
+      <p>이 블로그는 개발하면서 배운 것들과 일상의 단상을 기록하는 공간이다.</p>
+    </div>
+    <div class="about-social">
+      {siteConfig.social.map(s => (
+        <a href={s.url} target="_blank" rel="noopener noreferrer">{s.name}</a>
+      ))}
+    </div>
+  </div>
+</BaseLayout>

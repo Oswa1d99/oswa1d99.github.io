@@ -1,0 +1,51 @@
+---
+---
+<span class="theme-toggle" id="theme-toggle" role="button" tabindex="0" aria-label="Toggle theme"></span>
+
+<script>
+  function initTheme() {
+    const toggle = document.getElementById('theme-toggle');
+    if (!toggle) return;
+
+    function getIcon(theme: string): string {
+      return theme === 'dark' ? '☽' : '☀';
+    }
+
+    function applyTheme(theme: string) {
+      document.documentElement.setAttribute('data-theme', theme);
+      toggle.textContent = getIcon(theme);
+    }
+
+    function syncGiscusTheme(theme: string) {
+      const giscusFrame = document.querySelector('iframe.giscus-frame') as HTMLIFrameElement | null;
+      if (giscusFrame) {
+        giscusFrame.contentWindow?.postMessage(
+          { giscus: { setConfig: { theme } } },
+          'https://giscus.app',
+        );
+      }
+    }
+
+    const stored = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const current = stored || (prefersDark ? 'dark' : 'light');
+    applyTheme(current);
+
+    toggle.addEventListener('click', () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      localStorage.setItem('theme', next);
+      syncGiscusTheme(next);
+    });
+
+    toggle.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggle.click();
+      }
+    });
+  }
+
+  initTheme();
+  document.addEventListener('astro:after-swap', initTheme);
+</script>
